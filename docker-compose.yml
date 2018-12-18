@@ -1,8 +1,16 @@
 chatserver:
   build: server/
   container_name: chatserver
+  volumes:
+    - /workspace/CUIChat/server:/server
+  tty: true
 
 chatclient:
   build: client/
   container_name: chatclient
+  volumes:
+    - /workspace/CUIChat/client:/client
+  tty: true
+  links:
+    - chatserver
   
