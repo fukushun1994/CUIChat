@@ -1,0 +1,8 @@
+chatserver:
+  build: server/
+  container_name: chatserver
+
+chatclient:
+  build: client/
+  container_name: chatclient
+  
