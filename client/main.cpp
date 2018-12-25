@@ -7,16 +7,30 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <thread>
 
 using namespace std;
 
 const int BUFFER_SIZE = 1024;
 
+void readMessages (int clientSock) {
+  while (true) {
+    // クライアントからの入力をバッファに読み込む
+    char buff[BUFFER_SIZE];
+    size_t size = read(clientSock, buff, BUFFER_SIZE);
+    cout << buff << endl;
+    if (size == 0) {
+      // EOF
+      break;
+    }
+  }
+}
+
 int main () {
   int sock;
   struct sockaddr_in serverSockAddr; // サーバへの接続情報
   unsigned short serverPort = 8080; //8080番ポートに接続
-  char* serverAddress = "172.17.0.3"; //サーバのIPアドレス
+  char* serverAddress = "172.17.0.2"; //サーバのIPアドレス
 
   // TCPソケットの作成
   if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
@@ -41,10 +55,17 @@ int main () {
   }
   cout << "connected to " << inet_ntoa(serverSockAddr.sin_addr) << endl;
 
-  while(true) {
+  bool isFinished = false;
+  // 読み込み用のスレッドを作成・開始
+  thread readThread(
+    [&]{
+      readMessages(sock);
+      isFinished = true;
+    });
+  while(!isFinished) {
     char input[BUFFER_SIZE];
     int length;
-    cout << "> ";
+
     if (fgets(input, BUFFER_SIZE, stdin) == 0) {
       break;
     }
@@ -52,12 +73,11 @@ int main () {
     if (input[length - 1] == '\n') {
       input[length - 1] = '\0'; //改行文字をヌル文字に変更
     }
-    // サーバに送信
-    write(sock, input, length); 
-    // サーバからの返信をバッファに読み込む
-    char buff[BUFFER_SIZE];
-    size_t size = read(sock, buff, BUFFER_SIZE);
-    cout << "response:" << buff << endl;
+    if (isFinished) {
+      break;
+    }
+    // 入力をサーバへ送信する
+    write(sock, input, length);
   }
   close(sock);
   return 0;

@@ -7,11 +7,25 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <thread>
 
 using namespace std;
 
 const int QUEUE_LEN = 5;
 const int BUFFER_SIZE = 1024;
+
+void readMessages (int clientSock) {
+  while (true) {
+    // クライアントからの入力をバッファに読み込む
+    char buff[BUFFER_SIZE];
+    size_t size = read(clientSock, buff, BUFFER_SIZE);
+    cout << buff << endl;
+    if (size == 0) {
+      // EOF
+      break;
+    }
+  }
+}
 
 int main () {
   int serverSock;
@@ -66,19 +80,31 @@ int main () {
     exit(EXIT_FAILURE);
   }
   cout << "connected from " << inet_ntoa(clientSockAddr.sin_addr) << endl;
-  while(true) {
-    // クライアントからの入力をバッファに読み込む
-    char buff[BUFFER_SIZE];
-    size_t size = read(clientSock, buff, BUFFER_SIZE);
+  
+  bool isFinished = false;
+  // 読み込み用のスレッドを作成・開始
+  thread readThread(
+    [&]{
+      readMessages(clientSock);
+      isFinished = true;
+    });
+    
+  while(!isFinished) {
+    char input[BUFFER_SIZE];
+    int length;
 
-    if (size == 0) {
-      // EOF
+    if (fgets(input, BUFFER_SIZE, stdin) == 0) {
       break;
-    } else {
-      cout << buff << endl;
-      // クライアントからの入力をそのままクライアントに送り返す
-      write(clientSock, buff, size);
     }
+    length = strlen(input);
+    if (input[length - 1] == '\n') {
+      input[length - 1] = '\0'; //改行文字をヌル文字に変更
+    }
+    if (isFinished) {
+      break;
+    }
+    // 入力をクライアントへ送信する
+    write(clientSock, input, length);
   }
   close(clientSock);
   return 0;
