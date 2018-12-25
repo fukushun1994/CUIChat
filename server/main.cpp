@@ -14,16 +14,32 @@ using namespace std;
 const int QUEUE_LEN = 5;
 const int BUFFER_SIZE = 1024;
 
-void readMessages (int clientSock) {
+void readMessages (int socket) {
   while (true) {
     // クライアントからの入力をバッファに読み込む
     char buff[BUFFER_SIZE];
-    size_t size = read(clientSock, buff, BUFFER_SIZE);
+    size_t size = read(socket, buff, BUFFER_SIZE);
     cout << buff << endl;
     if (size == 0) {
       // EOF
       break;
     }
+  }
+}
+
+void writeMessages (int socket) {
+  while (true) {
+    char input[BUFFER_SIZE];
+    int length;
+
+    if (fgets(input, BUFFER_SIZE, stdin) == 0) {
+      break;
+    }
+    length = strlen(input);
+    if (input[length - 1] == '\n') {
+      input[length - 1] = '\0'; //改行文字をヌル文字に変更
+    }
+    write(socket, input, length);
   }
 }
 
@@ -88,24 +104,17 @@ int main () {
       readMessages(clientSock);
       isFinished = true;
     });
+  thread writeThread(
+    [&]{
+      writeMessages(clientSock);
+      isFinished = true;
+    });
     
   while(!isFinished) {
-    char input[BUFFER_SIZE];
-    int length;
-
-    if (fgets(input, BUFFER_SIZE, stdin) == 0) {
-      break;
-    }
-    length = strlen(input);
-    if (input[length - 1] == '\n') {
-      input[length - 1] = '\0'; //改行文字をヌル文字に変更
-    }
-    if (isFinished) {
-      break;
-    }
-    // 入力をクライアントへ送信する
-    write(clientSock, input, length);
+    // main loop
   }
+  readThread.detach();
+  writeThread.detach();
   close(clientSock);
   return 0;
 }
