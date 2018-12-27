@@ -15,14 +15,14 @@ const int BUFFER_SIZE = 1024;
 
 void readMessages (int socket) {
   while (true) {
-    // クライアントからの入力をバッファに読み込む
+    // サーバからのメッセージをバッファに読み込む
     char buff[BUFFER_SIZE];
     size_t size = read(socket, buff, BUFFER_SIZE);
-    cout << buff << endl;
     if (size == 0) {
       // EOF
       break;
     }
+    cout << buff << endl;
   }
 }
 
